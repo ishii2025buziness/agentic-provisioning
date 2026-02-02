@@ -1,0 +1,30 @@
+# Agentic Provisioning
+
+> Self-optimizing provisioning system for GitHub repositories.
+
+## Overview
+
+This skill enables AI agents to:
+- Analyze GitHub repositories and extract requirements (language, GPU, memory)
+- Search for optimal cloud providers via web search
+- Provision environments (Docker/cloud)
+- Maintain a knowledge base of successful setups
+
+## Files
+
+- SKILL.md: Main skill definition with step-by-step procedures
+- references/ARCHITECTURE.md: System architecture and design principles
+- references/PROVIDERS.md: Supported cloud providers
+- scripts/: Reference implementations (optional, not required)
+
+## Usage
+
+When user provides a GitHub URL and asks to deploy/run/provision:
+1. Read SKILL.md for procedures
+2. Follow Step 1-5 to analyze, search, provision, and record
+
+## Key Concepts
+
+- **Lock**: Save successful procedures to knowledge base for reproducibility
+- **Search Better**: Search web for improvements before each run
+- **Language Independent**: Procedures can be implemented in any language
