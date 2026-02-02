@@ -180,6 +180,34 @@ assets/knowledge/
 - 新しいツールが見つかった → `tool_upgrade`として提案
 - 前回から30日以上経過 → `refresh_suggestion`
 
+## 3.4 必要なスキルの動的インストール
+
+リポジトリの要件に応じて、追加のスキルが必要な場合がある。
+[OpenSkills](https://github.com/numman-ali/openskills) を使って動的にインストール:
+
+```bash
+npx openskills install <github-org>/<skill-name>
+npx openskills sync
+```
+
+**スキル発見の検索クエリ例:**
+```
+"agent skills for {framework}"
+"openskills {use_case}"
+site:github.com SKILL.md {requirement}
+```
+
+**判断基準:**
+- 特定のファイル形式処理が必要（PDF, Excel等） → 専用スキルを検索
+- 特定のクラウドプロバイダーが最適 → プロバイダー用スキルを検索
+- 特殊なビルドツールが必要 → ビルドスキルを検索
+
+**インストール後:**
+```bash
+npx openskills read <skill-name>
+```
+でスキルの手順を読み込み、実行に統合する。
+
 ---
 
 # Step 4: プロビジョニング

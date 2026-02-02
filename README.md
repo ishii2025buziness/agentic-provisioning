@@ -41,6 +41,18 @@ AIエージェント:
 
 ## インストール
 
+### OpenSkills（推奨）
+
+```bash
+# どのエージェントでも使える
+npx openskills install ishii2025buziness/agentic-provisioning
+npx openskills sync
+```
+
+[OpenSkills](https://github.com/numman-ali/openskills) は Agent Skills の汎用ローダー。Claude Code, Cursor, Windsurf, Aider, Codex 等で動作。
+
+### 手動インストール
+
 ```bash
 # Claude Codeの場合
 git clone https://github.com/ishii2025buziness/agentic-provisioning ~/.claude/skills/agentic-provisioning
@@ -147,4 +159,5 @@ MIT
 ## 関連リンク
 
 - [Agent Skills仕様](https://agentskills.io/)
+- [OpenSkills](https://github.com/numman-ali/openskills) - 汎用スキルローダー
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
