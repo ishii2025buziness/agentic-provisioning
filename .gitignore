@@ -20,4 +20,7 @@ assets/knowledge/*.json
 Thumbs.db
 
 # Claude Code local settings
-.claude/
+23: .claude/
+24: 
+25: # Local environment variables
+26: .env
