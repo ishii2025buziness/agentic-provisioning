@@ -53,6 +53,10 @@
                 <div class="text-xs text-slate-400 uppercase font-bold mb-1">Last Run Status</div>
                 <div id="stat-last-run" class="text-sm font-semibold text-emerald-400">Never executed</div>
             </div>
+            <div class="glass p-6 rounded-2xl border-l-4 border-blue-400">
+                <div class="text-xs text-slate-400 uppercase font-bold mb-1">External Cloud Backup (R2/S3)</div>
+                <div id="stat-cloud-sync" class="text-sm font-semibold text-blue-300">Not configured</div>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -137,6 +141,7 @@
             document.getElementById('config-mode').value = data.config.mission.mode;
             document.getElementById('stat-vault').innerText = (data.vaultSize || 0).toLocaleString();
             document.getElementById('stat-last-run').innerText = data.config.settings?.last_run ? new Date(data.config.settings.last_run).toLocaleString() : 'Ready to start';
+            document.getElementById('stat-cloud-sync').innerText = data.config.settings?.last_cloud_sync ? `Synced: ${new Date(data.config.settings.last_cloud_sync).toLocaleTimeString()}` : 'Check .env config';
         }
 
         async function saveConfig() {

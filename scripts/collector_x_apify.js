@@ -140,6 +140,15 @@ async function main() {
         config.settings.last_run = new Date().toISOString();
         config.settings.total_stored = (existingIds.size + newItems.length);
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+        // Trigger Cloud Sync if configured
+        try {
+            console.log("[X-Collector] Triggering Cloud Backup...");
+            const { execSync } = await import('node:child_process');
+            execSync('node scripts/cloud_sync.js', { stdio: 'inherit' });
+        } catch (e) {
+            console.error("[X-Collector] Cloud Backup failed or not configured.");
+        }
     }
 }
 
