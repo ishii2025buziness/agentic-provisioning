@@ -7,13 +7,16 @@
   "scripts": {
     "hetzner": "node scripts/provider_hetzner.js",
     "x-collector": "node scripts/collector_x_apify.js",
-    "deploy": "node scripts/deploy_stack.js"
+    "deploy": "node scripts/deploy_stack.js",
+    "dashboard": "node scripts/dashboard_server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "axios": "^1.13.4",
-    "dotenv": "^17.2.3"
+    "body-parser": "^2.2.2",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1"
   }
 }

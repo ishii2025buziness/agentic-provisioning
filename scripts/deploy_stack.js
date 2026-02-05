@@ -30,14 +30,22 @@ async function deploy() {
             cd ~/app &&
             npm install &&
             npm install -g pm2 &&
+            # Setup Dashboard
+            pm2 delete dashboard || true &&
+            pm2 start scripts/dashboard_server.js --name dashboard &&
+            # Setup/Restart Collector
             pm2 delete x-collector || true &&
-            pm2 start scripts/collector_x_apify.js --name x-collector -- --interval 3600
+            pm2 start scripts/collector_x_apify.js --name x-collector -- --interval 3600 &&
+            # Save PM2 state for reboots
+            pm2 save
         `;
         execSync(`ssh -o StrictHostKeyChecking=no root@${ip} "${remoteCmd}"`, { stdio: 'inherit' });
 
-        console.log(`\n[SUCCESS] Deployed to ${ip}!`);
-        console.log(`The collector is now running in the background on Hetzner.`);
-        console.log(`You can turn off your local PC now.`);
+        console.log(`\n[SUCCESS] Stack Deployed to ${ip}!`);
+        console.log(`--------------------------------------------------`);
+        console.log(`MANAGEMENT DASHBOARD: http://${ip}:3000`);
+        console.log(`--------------------------------------------------`);
+        console.log(`You can now manage your collection mission directly from the web.`);
     } catch (error) {
         console.error("[Deploy] Failed:", error.message);
     }

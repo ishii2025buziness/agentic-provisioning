@@ -86,18 +86,28 @@ async function main() {
         process.exit(1);
     }
 
-    // Example: Time-series search for specific keywords
-    const results = await run_twitter_scraper(token, {
-        mode: 'search',
-        query: 'AI Agents 2026 lang:ja',
-        maxTweets: 5
-    });
+    // Read Mission from config.json
+    let config = { mission: { mode: 'search', query: 'AI Agents 2026', maxTweets: 10 } };
+    try {
+        if (fs.existsSync('config.json')) {
+            config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+        }
+    } catch (e) {
+        console.error("Error reading config.json, using defaults.");
+    }
+
+    console.log(`[X-Collector] Starting mission: ${JSON.stringify(config.mission)}`);
+    const results = await run_twitter_scraper(token, config.mission);
 
     if (results) {
         console.log(`[SUCCESS] Collected ${results.length} items.`);
-        const filename = `x_data_${Date.now()}.json`;
+        const filename = `x_data_latest.json`;
         fs.writeFileSync(filename, JSON.stringify(results, null, 2));
-        console.log(`Data saved to ${filename}`);
+
+        // Update last run in config
+        config.settings = config.settings || {};
+        config.settings.last_run = new Date().toISOString();
+        fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
     }
 }
 

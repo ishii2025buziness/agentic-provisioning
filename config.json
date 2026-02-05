@@ -1,0 +1,12 @@
+{
+    "mission": {
+        "mode": "search",
+        "query": "AI Agents 2026",
+        "handles": [],
+        "maxTweets": 10
+    },
+    "settings": {
+        "interval_minutes": 60,
+        "last_run": null
+    }
+}
