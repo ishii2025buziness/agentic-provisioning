@@ -79,15 +79,35 @@ MLトレーニング向けインフラ。
 - GPU対応プラン
 - 時間課金
 
+## プロバイダー接続方式 (2026年版)
+
+特定のプロバイダーを `scripts/` に直接実装するのではなく、**MCP (Model Context Protocol)** サーバーを介して操作することを推奨します。
+
+### 推奨 MCP サーバー一覧
+
+| プロバイダー | 推奨 MCP / スキル | 役割 |
+|-------------|-----------------|------|
+| **Hetzner** | [dkruyt/mcp-hetzner](https://github.com/dkruyt/mcp-hetzner) | サーバー、FW、ボリューム管理 |
+| **AWS** | [modelcontextprotocol/servers/aws](https://github.com/modelcontextprotocol/servers) | EC2, S3, IAM管理 |
+| **Apify** | [Apify MCP](https://apify.com/mcp) | SNS/Webデータ収集 (X, Reddit等) |
+| **Vast.ai** | [vast-ai-skill](file:///skills/provider-vast-ai) | GPUリソースの確保 |
+
+## プロバイダーの自律的発見手順
+
+エージェントは `SKILL.md` の指示に従い、以下のように「最新の最適解」を発見する：
+
+1. **要件定義**: CPU/GPU、予算、リージョンを確定。
+2. **ウェブ検索**: `"{provider} mcp server official"` を検索。
+3. **動的統合**: `openskills install` で接続スキルを導入。
+
 ## プロバイダー選択ガイド
 
-| 要件 | 推奨 | 理由 |
-|------|------|------|
-| GPU + 低コスト | vast.ai | 市場最安値 |
-| GPU + 信頼性 | Lambda Labs | エンタープライズ品質 |
-| CPU + 低コスト | Hetzner | 欧州最安値 |
-| 開発/テスト | docker-local | 無料、即座 |
-| グローバル展開 | Vultr | 多リージョン |
+| 要件 | 推奨インターフェース | 理由 |
+|------|------------------|------|
+| **低コスト VPS** | `mcp-hetzner` | ARM(CAX)のコスパが最高 |
+| **格安 GPU** | `vast-ai-skill` | マーケットプレイスの柔軟性 |
+| **情報収集** | `Apify MCP` | X等の規約変更への追従性 |
+| **開発/テスト** | `docker-local` | 無料、即座 |
 
 ## 検索クエリ例
 

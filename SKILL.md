@@ -14,10 +14,11 @@ allowed-tools: Bash WebSearch WebFetch Read Write
 
 GitHubリポジトリのURLを受け取り、最適な環境で自動的にプロビジョニングする。
 
-## コアコンセプト
+## 稼働規律 (Guiding Principles)
 
-1. **Lock（成功体験の保存）**: 成功した手順をナレッジベースに保存し、再現可能にする
-2. **Search Better（継続的改善）**: 実行前に「より良い方法」をウェブ検索し、既存のベンチマークと比較
+1.  **Lock（成功体験の保存）**: 成功した手順をナレッジベースに保存し、再現可能にする。
+2.  **Search Better（継続的改善）**: 実行前に「より良い方法」をウェブ検索し、既存のベンチマークと比較。
+3.  **Anti-Obsolescence（陳腐化防止）**: **MCPやOpenSkillsといった「現在の標準」すら陳腐化する可能性を常に考慮する。** 2026年現在の定石を使いつつも、より上位のパラダイムや新技術（Post-MCP, Specialized AI-Native APIs等）の有無を必ず確認し、優位性があれば自律的に採用を検討すること。
 
 ## 使用タイミング
 
@@ -140,31 +141,24 @@ assets/knowledge/
 
 ---
 
-# Step 3: 改善検索（Search Better）
-
 ## 3.1 検索クエリ生成
 
-要件に基づいて検索クエリを生成:
+要件に基づいて、**「現在の標準を超え、時代遅れになっていないか」** を検証するためのクエリを生成する:
 
-**GPU必要な場合:**
+**パラダイム検証 (Meta-Search):**
 ```
-"cheapest gpu cloud {current_year}"
-"gpu cloud comparison vast.ai runpod lambda"
-"{gpu_type} cloud rental price"
-```
-
-**Python プロジェクト:**
-```
-"best python package manager {current_year}"
-"python deployment best practices"
+"state of the art AI agent deployment {current_year}"
+"is MCP still the standard for AI-cloud integration?"
+"better alternatives to OpenSkills or MCP in {current_year}"
 ```
 
-**フレームワーク固有:**
+**プロバイダー/技術検索 (Deep Search):**
 ```
-"best way to deploy {framework} {current_year}"
+"cheapest vps/gpu provider comparison {current_month} {current_year}"
+"{requirement} best implementation approach {current_year}"
 ```
 
-## 3.2 検索結果から抽出する情報
+## 3.2 検索結果の評価と「時代遅れ」の判定
 
 | 項目 | 例 |
 |------|-----|
@@ -180,45 +174,48 @@ assets/knowledge/
 - 新しいツールが見つかった → `tool_upgrade`として提案
 - 前回から30日以上経過 → `refresh_suggestion`
 
-## 3.4 必要なスキルの動的インストール
+## 3.4 必要なスキルの動的インストールとMCP連携
 
-リポジトリの要件に応じて、追加のスキルが必要な場合がある。
-[OpenSkills](https://github.com/numman-ali/openskills) を使って動的にインストール:
+2026年現在のAIエージェント環境では、車輪の再開発を避けるため、**MCP (Model Context Protocol)** サーバーと **専門特化スキル** を優先的に探索する。
+[OpenSkills](https://github.com/numman-ali/openskills) を使い、以下の順序で機能を動的に拡張すること：
+
+### 3.4.1 探索順序
+
+1.  **MCPサーバーの探索**: 
+    - 特定のプロバイダー（Hetzner, AWS等）や高度なツール（ブラウザ操作, スクレイピング）が必要な場合、まず利用可能なMCPサーバーがないか検索する。
+    - 検索クエリ: `"{provider_name} mcp server official github {current_year}"`
+2.  **既存スキルの探索**:
+    - `agentskills.io` や GitHub 上で、目的のタスクに特化した `SKILL.md` を探す。
+    - 検索クエリ: `"agent skill for {task} {current_year}"`, `site:github.com SKILL.md {task}`
+
+### 3.4.2 動的統合プロセス
 
 ```bash
-npx openskills install <github-org>/<skill-name>
+# ツールが見つかった場合、OpenSkillsでインストール
+npx openskills install <github-org>/<skill-repo>
 npx openskills sync
 ```
 
-**スキル発見の検索クエリ例:**
-```
-"agent skills for {framework}"
-"openskills {use_case}"
-site:github.com SKILL.md {requirement}
-```
+**判断基準と発見例:**
+- **インフラ管理基盤**: Hetznerが必要なら `dkruyt/mcp-hetzner` 等の定評あるMCPを優先。
+- **データ収集**: X/SNS収集なら `Apify MCP` や `Firecrawl MCP` を優先。
+- **特殊処理**: PDF解析、Excel自動化など、汎用ツールより専門スキルが効率的。
 
-**判断基準:**
-- 特定のファイル形式処理が必要（PDF, Excel等） → 専用スキルを検索
-- 特定のクラウドプロバイダーが最適 → プロバイダー用スキルを検索
-- 特殊なビルドツールが必要 → ビルドスキルを検索
-
-**インストール後:**
-```bash
-npx openskills read <skill-name>
-```
-でスキルの手順を読み込み、実行に統合する。
+インストール後、`npx openskills read <skill-name>` で手順をプロビジョニングフローに統合し、自律的に「最適な部品の組み合わせ」を構成する。
 
 ---
 
 # Step 4: プロビジョニング
 
-## 4.1 プロバイダー選択
+## 4.1 プロバイダー選択とインターフェース
 
-| 要件 | 推奨プロバイダー |
-|------|------------------|
+プロバイダーは直接操作するのではなく、**抽象化されたインターフェース（MCP/スキル）** を介して操作することを原則とする。
+
+| 要件 | 推奨プロバイダー / インターフェース |
+|------|------------------------------------|
+| CPU + 低コスト | Hetzner (via `mcp-hetzner`) |
 | GPU + 低コスト | vast.ai, RunPod |
-| GPU + 信頼性 | Lambda Labs |
-| CPU + 低コスト | Hetzner, Vultr |
+| 統合データ収集 | Apify, Firecrawl (via MCP) |
 | ローカル開発 | Docker Local |
 
 ## 4.2 Docker Local プロビジョニング

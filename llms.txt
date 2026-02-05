@@ -23,8 +23,12 @@ When user provides a GitHub URL and asks to deploy/run/provision:
 1. Read SKILL.md for procedures
 2. Follow Step 1-5 to analyze, search, provision, and record
 
-## Key Concepts
+## Discovery & Expansion (2026+)
 
-- **Lock**: Save successful procedures to knowledge base for reproducibility
-- **Search Better**: Search web for improvements before each run
-- **Language Independent**: Procedures can be implemented in any language
+- **MCP Discovery**: Prioritize finding official MCP servers for provider/data access.
+- **Polymorphism**: Uses sub-skills in `/skills` to abstract specific provider/collector logic.
+- **Self-Evolution**: Updates its own strategy based on the best tools found in the ecosystem.
+
+### Available Sub-Skills
+- skills/provider-hetzner: Hetzner Cloud specialized provisioning.
+- skills/collector-x-apify: Advanced SNS data collection via Apify.
