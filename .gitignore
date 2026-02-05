@@ -20,7 +20,11 @@ assets/knowledge/*.json
 Thumbs.db
 
 # Claude Code local settings
-23: .claude/
-24: 
-25: # Local environment variables
-26: .env
+.claude/
+
+# Local environment variables
+.env
+
+# Local state and samples
+server_state.json
+collected_tweets_sample.json
