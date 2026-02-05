@@ -6,7 +6,8 @@
   "main": "index.js",
   "scripts": {
     "hetzner": "node scripts/provider_hetzner.js",
-    "x-collector": "node scripts/collector_x_apify.js"
+    "x-collector": "node scripts/collector_x_apify.js",
+    "deploy": "node scripts/deploy_stack.js"
   },
   "keywords": [],
   "author": "",
