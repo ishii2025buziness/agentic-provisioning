@@ -174,32 +174,29 @@ assets/knowledge/
 - 新しいツールが見つかった → `tool_upgrade`として提案
 - 前回から30日以上経過 → `refresh_suggestion`
 
-## 3.4 必要なスキルの動的インストールとMCP連携
+## 3.4 外部スキルとMCPの動的統合
 
-2026年現在のAIエージェント環境では、車輪の再開発を避けるため、**MCP (Model Context Protocol)** サーバーと **専門特化スキル** を優先的に探索する。
-[OpenSkills](https://github.com/numman-ali/openskills) を使い、以下の順序で機能を動的に拡張すること：
+車輪の再開発を避けるため、自身のナレッジにない機能は以下の順序で探索・統合する。
 
-### 3.4.1 探索順序
+### 3.4.1 推奨スキル・ソース
 
-1.  **MCPサーバーの探索**: 
-    - 特定のプロバイダー（Hetzner, AWS等）や高度なツール（ブラウザ操作, スクレイピング）が必要な場合、まず利用可能なMCPサーバーがないか検索する。
-    - 検索クエリ: `"{provider_name} mcp server official github {current_year}"`
-2.  **既存スキルの探索**:
-    - `agentskills.io` や GitHub 上で、目的のタスクに特化した `SKILL.md` を探す。
-    - 検索クエリ: `"agent skill for {task} {current_year}"`, `site:github.com SKILL.md {task}`
+1.  **Personal Skill Library (優先)**: 
+    - `ishii2025buziness/my-agent-skills` に収録されている高品質な自作スキル。
+    - 構成:
+      - `provider-hetzner`: インフラ構築
+      - `collector-x-apify`: Xデータ収集
+2.  **MCPサーバー**:
+    - 公式のMCPサーバー（`dkruyt/mcp-hetzner`等）。
+3.  **Community / Standard Skills**:
+    - `agentskills.io` や `anthropics/skills`。
 
 ### 3.4.2 動的統合プロセス
 
 ```bash
-# ツールが見つかった場合、OpenSkillsでインストール
-npx openskills install <github-org>/<skill-repo>
+# 必要な場合、自分専用のスキル集を優先的に同期
+npx openskills install ishii2025buziness/my-agent-skills
 npx openskills sync
 ```
-
-**判断基準と発見例:**
-- **インフラ管理基盤**: Hetznerが必要なら `dkruyt/mcp-hetzner` 等の定評あるMCPを優先。
-- **データ収集**: X/SNS収集なら `Apify MCP` や `Firecrawl MCP` を優先。
-- **特殊処理**: PDF解析、Excel自動化など、汎用ツールより専門スキルが効率的。
 
 インストール後、`npx openskills read <skill-name>` で手順をプロビジョニングフローに統合し、自律的に「最適な部品の組み合わせ」を構成する。
 
