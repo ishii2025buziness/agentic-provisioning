@@ -1,22 +1,19 @@
-## 1. 結局何を作ったの？（Q&A）
+## 1.**Q: 結局何を作ったの？（Q&A）**
 
 **Q: 全部既存のSkillsで実行されたの？**
-A: **いいえ、違います。** 本来は既存の「Skills」を動的にロードして使う予定でしたが、あなたの環境（Ubuntu）に `Node.js` や `openskills` CLIが入っていなかったため、**「Skillsの中身（ロジック）」をPythonスクリプトとして書き下ろしました。**
+A: **いいえ、違います。** 本来は既存の「Skills」を動的にロードして使う予定でしたが、PythonからNode.jsに切り替える過程で、**「Skillsの中身（ロジック）」をNode.jsスクリプトとして書き下ろしました。**
 
-**Q: スケールメリットはある？**
-A: はい。中身は `agentskills.io` の規格に準拠したロジックであり、将来的にあなたが `openskills` などを導入した際も、そのまま「Skillsの一部」として扱えるように設計しています。
-
-**Q: 何をすればいいの？**
-A: 基本的には、ディレクトリにある2つのスクリプトを叩くだけです。
+**Q: どうやって動かすの？**
+A: `npm` を使って、直感的なコマンドで実行できます。
 ```bash
-python3 scripts/provider_hetzner.py    # Hetznerの状態確認
-python3 scripts/collector_x_apify.py    # Xのポストを取得
+npm run hetzner       # Hetznerのサーバー構築・確認
+npm run x-collector   # X（Twitter）のポスト収集
 ```
 
 ## 2. 構成図
 ```mermaid
 graph TD
-    Local[Your PC] -->|.env| Scripts[Python Scripts]
+    Local[Your PC] -->|.env| Scripts[Node.js Scripts]
     Scripts -->|Hetzner API| Cloud[Hetzner Server]
     Scripts -->|Apify API| X[X/Twitter Data]
 ```
