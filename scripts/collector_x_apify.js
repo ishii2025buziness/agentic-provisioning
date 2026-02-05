@@ -88,9 +88,15 @@ async function main() {
 
     // Read Mission from config.json
     let config = { mission: { mode: 'search', query: 'AI Agents 2026', maxTweets: 10 } };
+    const configPath = 'config.json';
+    const vaultPath = 'vault/x_vault.jsonl';
+    const latestPath = 'x_data_latest.json';
+
+    if (!fs.existsSync('vault')) fs.mkdirSync('vault');
+
     try {
-        if (fs.existsSync('config.json')) {
-            config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
+        if (fs.existsSync(configPath)) {
+            config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
         }
     } catch (e) {
         console.error("Error reading config.json, using defaults.");
@@ -99,15 +105,41 @@ async function main() {
     console.log(`[X-Collector] Starting mission: ${JSON.stringify(config.mission)}`);
     const results = await run_twitter_scraper(token, config.mission);
 
-    if (results) {
-        console.log(`[SUCCESS] Collected ${results.length} items.`);
-        const filename = `x_data_latest.json`;
-        fs.writeFileSync(filename, JSON.stringify(results, null, 2));
+    if (results && results.length > 0) {
+        // Load existing IDs for deduplication
+        const existingIds = new Set();
+        if (fs.existsSync(vaultPath)) {
+            const lines = fs.readFileSync(vaultPath, 'utf8').split('\n').filter(Boolean);
+            lines.forEach(line => {
+                try {
+                    const tweet = JSON.parse(line);
+                    if (tweet.id) existingIds.add(tweet.id);
+                } catch (e) { }
+            });
+        }
 
-        // Update last run in config
+        // Filter new items
+        const newItems = results.filter(item => !existingIds.has(item.id));
+        console.log(`[X-Collector] Found ${results.length} items. New unique items: ${newItems.length}`);
+
+        if (newItems.length > 0) {
+            // Append to Vault (Deduplicated Data Store)
+            const stream = fs.createWriteStream(vaultPath, { flags: 'a' });
+            newItems.forEach(item => {
+                stream.write(JSON.stringify(item) + '\n');
+            });
+            stream.end();
+            console.log(`[X-Collector] Appended ${newItems.length} new items to vault.`);
+        }
+
+        // Still update the "latest" for dashboard preview
+        fs.writeFileSync(latestPath, JSON.stringify(results.slice(0, 20), null, 2));
+
+        // Update metadata
         config.settings = config.settings || {};
         config.settings.last_run = new Date().toISOString();
-        fs.writeFileSync('config.json', JSON.stringify(config, null, 2));
+        config.settings.total_stored = (existingIds.size + newItems.length);
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     }
 }
 

@@ -28,7 +28,11 @@ app.get('/api/status', (req, res) => {
     }
 
     const config = JSON.parse(fs.readFileSync('config.json', 'utf8'));
-    res.json({ status, uptime, config });
+
+    // Calculate vault size if possible
+    let vaultSize = config.settings?.total_stored || 0;
+
+    res.json({ status, uptime, config, vaultSize });
 });
 
 // API: Save Config
