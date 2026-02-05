@@ -11,42 +11,62 @@ async function get_token() {
     return process.env.APIFY_API_TOKEN;
 }
 
-async function run_twitter_scraper(token, query, maxTweets = 10) {
-    // Current stable public actor slug
-    const actorId = "apify~twitter-scraper-v2";
+/**
+ * X (Twitter) Data Collector
+ * Modes:
+ * 1. 'search' - Query based search (Advanced queries supported)
+ * 2. 'user'   - Fetch tweets from specific handles
+ * 3. 'profile'- Fetch metadata for specific handles
+ */
+async function run_twitter_scraper(token, options = {}) {
+    const {
+        mode = 'search',
+        query = 'AI Agents 2026',
+        handles = [],
+        maxTweets = 10,
+        actorId = "apify~twitter-scraper-v2"
+    } = options;
 
-    console.log(`Starting Apify Actor ${actorId} for query: ${query}...`);
+    console.log(`[X-Collector] Mode: ${mode} | Max Items: ${maxTweets}`);
+
+    // Prepare Input based on mode
+    let runInput = {
+        maxTweets: maxTweets,
+        addUserInfo: true
+    };
+
+    if (mode === 'search') {
+        runInput.searchQueries = Array.isArray(query) ? query : [query];
+    } else if (mode === 'user' || mode === 'profile') {
+        runInput.twitterHandles = Array.isArray(handles) ? handles : [handles];
+        if (mode === 'profile') runInput.scrapeProfile = true;
+    }
 
     try {
-        const runRes = await axios.post(`${APIFY_API_URL}/acts/${actorId}/runs?token=${token}`, {
-            searchQueries: [query],
-            maxTweets: maxTweets,
-            addUserInfo: true
-        });
-
+        const runRes = await axios.post(`${APIFY_API_URL}/acts/${actorId}/runs?token=${token}`, runInput);
         const runId = runRes.data.data.id;
         const datasetId = runRes.data.data.defaultDatasetId;
 
-        console.log(`Run started: ${runId}. Waiting for completion...`);
+        console.log(`[X-Collector] Run started: ${runId}. Polling latest posts...`);
 
+        // Polling loop
         while (true) {
             const statusRes = await axios.get(`${APIFY_API_URL}/acts/${actorId}/runs/${runId}?token=${token}`);
-            const status = statusRes.data.data.status;
+            const { status } = statusRes.data.data;
 
             if (status === "SUCCEEDED") break;
             if (["FAILED", "ABORTED", "TIMED-OUT"].includes(status)) {
-                console.error(`Actor run failed with status: ${status}`);
-                return null;
+                throw new Error(`Apify Actor failed with status: ${status}`);
             }
-            await new Promise(resolve => setTimeout(resolve, 10000));
+            await new Promise(resolve => setTimeout(resolve, 5000));
         }
 
-        console.log("Fetching results from dataset...");
+        console.log("[X-Collector] Fetching results...");
         const itemsRes = await axios.get(`${APIFY_API_URL}/datasets/${datasetId}/items?token=${token}`);
         return itemsRes.data;
 
     } catch (error) {
-        console.error("Error with Apify API:", error.response?.data || error.message);
+        console.error("[X-Collector] Error:", error.response?.data || error.message);
         return null;
     }
 }
@@ -58,11 +78,18 @@ async function main() {
         process.exit(1);
     }
 
-    const results = await run_twitter_scraper(token, "AI Agents 2026");
+    // Example: Time-series search for specific keywords
+    const results = await run_twitter_scraper(token, {
+        mode: 'search',
+        query: 'AI Agents 2026 lang:ja',
+        maxTweets: 5
+    });
+
     if (results) {
-        console.log(`SUCCESS: Collected ${results.length} tweets.`);
-        fs.writeFileSync("collected_tweets_sample.json", JSON.stringify(results, null, 2));
-        console.log("Sample data saved to collected_tweets_sample.json");
+        console.log(`[SUCCESS] Collected ${results.length} items.`);
+        const filename = `x_data_${Date.now()}.json`;
+        fs.writeFileSync(filename, JSON.stringify(results, null, 2));
+        console.log(`Data saved to ${filename}`);
     }
 }
 
