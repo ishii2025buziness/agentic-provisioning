@@ -12,34 +12,42 @@ async function get_token() {
 }
 
 /**
- * X (Twitter) Data Collector
+ * X (Twitter) Data Collector - Full Coverage Edition
  * Modes:
- * 1. 'search' - Query based search (Advanced queries supported)
- * 2. 'user'   - Fetch tweets from specific handles
- * 3. 'profile'- Fetch metadata for specific handles
+ * 1. 'search'   - Query based (Advanced search supported)
+ * 2. 'user'     - Fetch tweets from specific handles
+ * 3. 'list'     - Fetch context from a specific X List (URL required)
+ * 4. 'profile'  - Fetch metadata for specific handles
+ * 5. 'url'      - Direct URL scraping (specific tweets, searches, or profiles)
  */
 async function run_twitter_scraper(token, options = {}) {
     const {
         mode = 'search',
-        query = 'AI Agents 2026',
+        query = '',
         handles = [],
+        urls = [], // For 'list' or 'url' modes
         maxTweets = 10,
         actorId = "apify~twitter-scraper-v2"
     } = options;
 
-    console.log(`[X-Collector] Mode: ${mode} | Max Items: ${maxTweets}`);
+    console.log(`[X-Collector] Mode: ${mode.toUpperCase()} | Max Items: ${maxTweets}`);
 
-    // Prepare Input based on mode
     let runInput = {
         maxTweets: maxTweets,
-        addUserInfo: true
+        addUserInfo: true,
+        sort: "Latest" // Default to latest for polling accuracy
     };
 
+    // Advanced Polymorphic Input Mapping
     if (mode === 'search') {
-        runInput.searchQueries = Array.isArray(query) ? query : [query];
-    } else if (mode === 'user' || mode === 'profile') {
+        runInput.searchTerms = Array.isArray(query) ? query : [query];
+    } else if (mode === 'user') {
         runInput.twitterHandles = Array.isArray(handles) ? handles : [handles];
-        if (mode === 'profile') runInput.scrapeProfile = true;
+    } else if (mode === 'list' || mode === 'url') {
+        runInput.startUrls = (Array.isArray(urls) ? urls : [urls]).map(u => ({ url: u }));
+    } else if (mode === 'profile') {
+        runInput.twitterHandles = Array.isArray(handles) ? handles : [handles];
+        runInput.scrapeProfile = true;
     }
 
     try {
