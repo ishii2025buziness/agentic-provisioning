@@ -1,0 +1,77 @@
+{
+  "id": "4bc1bf56_20260206_233000",
+  "repo_url": "https://github.com/ace-step/ACE-Step",
+  "created_at": "2026-02-06T23:30:00",
+  "provider_used": "vast.ai",
+  "success": true,
+  "instance": {
+    "id": 31013433,
+    "machine_id": 31375,
+    "region": "PL (Poland)",
+    "gpu": "RTX 3090",
+    "gpu_vram_gb": 24,
+    "compute_capability": "sm_86",
+    "cost_per_hour": 0.1484,
+    "reliability": 0.997,
+    "docker_image": "nvidia/cuda:12.4.1-runtime-ubuntu22.04",
+    "disk_gb": 40
+  },
+  "requirements": {
+    "repo_name": "ACE-Step-1.5",
+    "repo_url": "https://github.com/ACE-Step/ACE-Step-1.5",
+    "model_version": "1.5",
+    "primary_language": "python",
+    "needs_gpu": true,
+    "gpu_type": "CUDA",
+    "min_compute_capability": "sm_75",
+    "frameworks": ["pytorch", "transformers", "diffusers"],
+    "actual_min_vram_gb": 4,
+    "recommended_vram_gb": 12,
+    "full_capability_vram_gb": 24,
+    "model_weights_total_gb": 10.1
+  },
+  "setup_method": "source_install",
+  "setup_time_minutes": 5,
+  "setup_steps": [
+    "vast.ai offer search with guardrails: gpu_ram >= 12, geolocation notin CN, reliability > 0.99",
+    "Instance created with nvidia/cuda:12.4.1-runtime-ubuntu22.04 (lightweight ~4GB image)",
+    "Image pull: ~1 minute (vs 30+ minutes for valyriantech/ace-step-1.5 at 173GB)",
+    "SSH connected immediately",
+    "Installed system deps: git, curl, python3.11 (deadsnakes PPA)",
+    "Installed uv (Rust-based Python package manager)",
+    "git clone --depth 1 https://github.com/ACE-Step/ACE-Step-1.5.git",
+    "uv sync (installs all deps including torch 2.10.0+cu128)",
+    "uv run acestep-api --host 0.0.0.0 --port 8000",
+    "Models auto-downloaded from HuggingFace on first run (~10GB, ~2 minutes)",
+    "Health check: PASSED",
+    "Test generation: SUCCESS (0.69s for 30s song, DiT turbo 8-step)"
+  ],
+  "performance": {
+    "gpu_tier": "tier6",
+    "dit_inference_seconds": 0.69,
+    "song_duration_seconds": 30,
+    "llm_model": "acestep-5Hz-lm-4B",
+    "max_duration_seconds": 480,
+    "max_batch_size_with_lm": 4,
+    "vram_used_gb": 13.91,
+    "vram_peak_gb": 21.80
+  },
+  "api_endpoints": {
+    "health": "GET /health",
+    "submit": "POST /release_task",
+    "result": "POST /query_result",
+    "audio": "GET /v1/audio?path=<path>"
+  },
+  "key_lessons": [
+    "DO NOT use valyriantech/ace-step-1.5 Docker image (173GB, overkill)",
+    "DO use lightweight CUDA base image + git clone + uv sync (5 min total setup)",
+    "DO NOT use ComfyUI - ACE-Step 1.5 has native REST API (acestep-api)",
+    "uv sync handles ALL dependencies including torch with correct CUDA version",
+    "Models auto-download from HuggingFace on first run",
+    "GPU tier auto-detected: system picks best LM model for available VRAM",
+    "vllm may fail without C compiler - falls back to PyTorch backend (OK)",
+    "RTX 3090 24GB runs full tier6 with 4B LM model"
+  ],
+  "vast_ai_search_filter": "geolocation notin [\"CN\"] reliability > 0.99 num_gpus = 1 gpu_ram >= 12 dph_total <= 0.20 inet_down > 100 gpu_name in [\"RTX 3060\",\"RTX 3090\",\"RTX 4060\",\"RTX 4070\",\"RTX 4080\",\"RTX 4090\",\"A10\",\"L40S\",\"A100\"]",
+  "reproduce_script": "scripts/ace-step-1.5-setup.sh"
+}
