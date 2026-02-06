@@ -1,0 +1,122 @@
+{
+  "id": "4bc1bf56_20260206_220000",
+  "repo_url": "https://github.com/ace-step/ACE-Step",
+  "created_at": "2026-02-06T22:00:00",
+  "provider_used": "vast.ai",
+  "success": false,
+  "instance": {
+    "id": 31011168,
+    "machine_id": 29155,
+    "region": "CA (Quebec)",
+    "gpu": "RTX 3060",
+    "gpu_vram_gb": 8,
+    "compute_capability": "sm_86",
+    "cost_per_hour": 0.0617,
+    "reliability": 0.999,
+    "docker_image": "valyriantech/ace-step-1.5"
+  },
+  "requirements": {
+    "repo_name": "ACE-Step",
+    "model_version": "1.5",
+    "primary_language": "python",
+    "needs_gpu": true,
+    "gpu_type": "CUDA",
+    "min_compute_capability": "sm_75",
+    "frameworks": ["pytorch", "transformers", "diffusers"],
+    "advertised_min_vram_gb": 4,
+    "actual_min_vram_gb": 12,
+    "estimated_memory_gb": 16
+  },
+  "setup_steps": [
+    "vast.ai offer search with guardrails (geolocation, reliability, GPU name allowlist): SUCCESS",
+    "Instance 31011168 created with valyriantech/ace-step-1.5 image: SUCCESS",
+    "Image pull (~15GB, ~10 minutes): SUCCESS",
+    "GPU health check (sm_86, PyTorch CUDA OK): SUCCESS",
+    "VRAM discovery: 8GB (not 12GB - RTX 3060 has 8GB and 12GB variants)",
+    "start.sh launched Gradio (7860) + API (8000) simultaneously: OOM",
+    "Killed both, restarted API server only: SERVER STARTED OK",
+    "Health check via SSH tunnel: SUCCESS",
+    "Test generation task submitted via /release_task: ACCEPTED",
+    "Task stuck in 'queued' state, /query_result returns empty data",
+    "Log analysis: LLM initialization (Qwen3 0.6B) triggered torch.OutOfMemoryError",
+    "DiT model uses ~7.5GB of 8GB VRAM, zero room for LLM",
+    "Killed API server, GPU memory leaked (7863MiB shown, no processes in nvidia-smi)",
+    "Had to kill zombie process to free GPU memory",
+    "Instance destroyed by user request"
+  ],
+  "failures": [
+    {
+      "type": "vram_insufficient_for_docker_image",
+      "severity": "fatal",
+      "description": "valyriantech/ace-step-1.5 Docker image's default configuration assumes 12GB+ VRAM. The DiT model alone consumes ~7.5GB. On 8GB VRAM, Gradio+API cannot coexist, and even API-only mode OOMs when initializing the LLM (Qwen3 0.6B) for task processing.",
+      "gpu": "RTX 3060 8GB",
+      "vram_available_gb": 8,
+      "vram_dit_model_gb": 7.5,
+      "vram_llm_model_gb": 1.5,
+      "resolution": "Require gpu_ram >= 12 in offer search AND verify actual VRAM post-boot. RTX 3060 exists in 8GB and 12GB variants - vast.ai listing may not distinguish them."
+    },
+    {
+      "type": "rtx3060_vram_variant_mismatch",
+      "severity": "fatal",
+      "description": "RTX 3060 has two variants: 8GB and 12GB. vast.ai offer listing showed the GPU name as 'RTX 3060' without specifying which variant. The gpu_ram filter was not applied strictly enough, or the host misreported VRAM.",
+      "expected_vram_gb": 12,
+      "actual_vram_gb": 8,
+      "resolution": "After instance creation, always run nvidia-smi to verify actual VRAM. If VRAM < required, destroy immediately before incurring setup costs. Add post-boot VRAM verification to preflight checklist."
+    },
+    {
+      "type": "concurrent_service_oom",
+      "severity": "high",
+      "description": "start.sh launches both Gradio UI (~4.6GB VRAM) and API server (~3GB VRAM) simultaneously. Combined VRAM exceeds 8GB, causing immediate OOM.",
+      "resolution": "On low-VRAM GPUs, run only one service at a time. Prefer API-only mode for programmatic access."
+    },
+    {
+      "type": "llm_init_oom_during_task_processing",
+      "severity": "fatal",
+      "description": "API server starts successfully and passes health check, but when processing a generation task, it attempts to initialize the LLM model (Qwen3 0.6B ~1.5GB) in addition to the already-loaded DiT model (~7.5GB). This causes torch.OutOfMemoryError. Tasks are accepted but never processed - permanently stuck in 'queued' state.",
+      "resolution": "Need 12GB+ VRAM for full ACE-Step 1.5 pipeline (DiT + LLM). The '4GB minimum' advertised by ACE-Step 1.5 is for model weights only, not runtime + LLM. Actual minimum for the valyriantech Docker image: 12GB."
+    },
+    {
+      "type": "gpu_memory_leak_on_kill",
+      "severity": "medium",
+      "description": "After pkill -9 on the API server process, nvidia-smi showed 7863MiB still in use with no visible processes. GPU memory was leaked by orphaned CUDA contexts. Required identifying and killing zombie processes.",
+      "resolution": "Use graceful shutdown (SIGTERM) before SIGKILL. If memory leaks, check for child processes with 'ps aux | grep python'. As last resort, the instance must be restarted."
+    },
+    {
+      "type": "misleading_min_vram_spec",
+      "severity": "high",
+      "description": "ACE-Step 1.5 documentation claims '<4GB VRAM' minimum. The valyriantech Docker image's tier system lists tier3 (8GB) as supported. However, the actual runtime requires: DiT model (~7.5GB) + LLM model (~1.5GB) + CUDA overhead (~0.5GB) = ~9.5GB minimum. 8GB is NOT sufficient.",
+      "actual_breakdown": {
+        "dit_model": "~7.5GB",
+        "llm_model": "~1.5GB",
+        "cuda_overhead": "~0.5GB",
+        "total_minimum": "~9.5GB"
+      },
+      "resolution": "Do not trust advertised minimum VRAM. Calculate: model weights + LLM weights + 20% overhead. For ACE-Step 1.5 with LLM: require 12GB minimum."
+    }
+  ],
+  "lessons_learned": [
+    "CRITICAL: RTX 3060 has 8GB and 12GB variants. vast.ai may not distinguish them. Always verify VRAM post-boot.",
+    "CRITICAL: ACE-Step 1.5 advertised '<4GB VRAM' is misleading. Full pipeline (DiT + LLM) needs 12GB+.",
+    "CRITICAL: valyriantech/ace-step-1.5 Docker image is designed for 12GB+ VRAM GPUs.",
+    "API server health check passing does NOT mean generation works. LLM loads lazily on first task.",
+    "vast.ai gpu_ram filter should be set to >= 12 for ACE-Step 1.5, not >= 8.",
+    "Guardrails from previous sessions (region, reliability, GPU allowlist) worked correctly this time.",
+    "Pre-built Docker images save time but may have hidden VRAM requirements beyond the model's spec.",
+    "Always test actual generation (not just /health) before considering deployment successful.",
+    "SIGKILL on GPU processes can leak VRAM. Prefer graceful shutdown."
+  ],
+  "recommended_next_config": {
+    "model": "ACE-Step-1.5",
+    "docker_image": "valyriantech/ace-step-1.5",
+    "min_gpu_vram_gb": 12,
+    "recommended_gpus": ["RTX 3060 12GB", "RTX 3090", "RTX 4070", "RTX 4080", "RTX 4090", "A10", "L40S", "A100"],
+    "avoid_gpus": ["RTX 3060 8GB", "RTX 3050", "RTX 2060"],
+    "vast_ai_filter": "gpu_ram >= 12 num_gpus = 1 reliability > 0.99 geolocation notin [\"CN\"]",
+    "alternative_for_low_vram": "Use Replicate API ($0.013/gen) or run locally with RTX 5060 Ti 16GB",
+    "post_boot_checks": [
+      "nvidia-smi to verify actual VRAM >= 12GB",
+      "/health endpoint",
+      "Submit test generation and wait for /query_result to return actual audio"
+    ]
+  }
+}
