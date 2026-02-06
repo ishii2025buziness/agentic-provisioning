@@ -1,0 +1,69 @@
+{
+  "id": "4bc1bf56_20260205_160000",
+  "repo_url": "https://github.com/ace-step/ACE-Step",
+  "created_at": "2026-02-05T16:00:00",
+  "provider_used": "vast.ai",
+  "success": false,
+  "requirements": {
+    "repo_name": "ACE-Step",
+    "primary_language": "python",
+    "needs_gpu": true,
+    "gpu_type": "CUDA",
+    "min_compute_capability": "sm_75",
+    "frameworks": ["pytorch", "transformers", "diffusers"],
+    "estimated_vram_gb": 8,
+    "estimated_memory_gb": 16
+  },
+  "setup_steps": [
+    "vast.ai instance created (RTX 4070S, China/Jiangsu)",
+    "Docker image pull: nvidia/cuda:12.4.1-devel-ubuntu22.04",
+    "TIMEOUT: Docker pull extremely slow due to GFW",
+    "Instance destroyed",
+    "Retry: RTX 4070, Canada, runtime image",
+    "TIMEOUT: PyTorch image not cached on host",
+    "Instance destroyed",
+    "Retry: RTX 3060, Quebec/Canada, minimal CUDA base",
+    "SUCCESS: Instance booted",
+    "ComfyUI + ACE-Step custom node installed",
+    "ACE-Step-v1-3.5B model downloaded (8GB)",
+    "ComfyUI started on port 8188",
+    "SSH tunnel established",
+    "Music generation via ComfyUI API: SUCCESS"
+  ],
+  "failures": [
+    {
+      "type": "gfw_network_block",
+      "description": "China region instance (Jiangsu) could not pull Docker images due to GFW blocking Docker Hub",
+      "gpu": "RTX 4070S",
+      "region": "CN",
+      "resolution": "Switch to Canada region"
+    },
+    {
+      "type": "docker_image_too_large",
+      "description": "nvidia/cuda:12.4.1-devel-ubuntu22.04 (~10GB) was unnecessary. Runtime image (~4GB) sufficient for inference",
+      "resolution": "Use runtime image instead of devel"
+    },
+    {
+      "type": "docker_cache_miss",
+      "description": "PyTorch Docker image not cached on vast.ai host, causing very slow startup",
+      "resolution": "Use minimal base image + pip install, or use prebuild image"
+    }
+  ],
+  "lessons_learned": [
+    "Always exclude CN region: geolocation notin [\"CN\"]",
+    "Use runtime, not devel Docker images for inference",
+    "Prefer prebuild Docker images with models pre-baked",
+    "Filter vast.ai by reliability > 0.99"
+  ],
+  "final_working_config": {
+    "instance_id": "30971522",
+    "gpu": "RTX 3060",
+    "vram_gb": 12,
+    "region": "Quebec/Canada",
+    "cost_per_hour": 0.064,
+    "docker_image": "nvidia/cuda:12.4-base-ubuntu22.04",
+    "backend": "ComfyUI + billwuhao/ComfyUI_ACE-Step",
+    "model": "ACE-Step-v1-3.5B",
+    "port": 8188
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "id": "4bc1bf56_20260206_180000",
+  "repo_url": "https://github.com/ace-step/ACE-Step",
+  "created_at": "2026-02-06T18:00:00",
+  "provider_used": "vast.ai",
+  "success": false,
+  "requirements": {
+    "repo_name": "ACE-Step",
+    "primary_language": "python",
+    "needs_gpu": true,
+    "gpu_type": "CUDA",
+    "min_compute_capability": "sm_75",
+    "frameworks": ["pytorch", "transformers", "diffusers"],
+    "estimated_vram_gb": 8,
+    "estimated_memory_gb": 16
+  },
+  "setup_steps": [
+    "vast.ai instance created (Titan Xp, South Korea)",
+    "SSH connection attempts: FAILED (30+ attempts over 20 minutes)",
+    "Instance destroyed (bad host)",
+    "Retry: vast.ai instance (Titan Xp Collectors Edition, Quebec/Canada)",
+    "SSH connected",
+    "Model download via onstart script: SILENTLY FAILED",
+    "ACEModelLoader node: FileNotFoundError (model dir missing)",
+    "Manual model download: SUCCESS",
+    "ComfyUI restart",
+    "FATAL: PyTorch CUDA incompatibility - Titan Xp sm_61 not supported",
+    "Instance destroyed",
+    "Session abandoned"
+  ],
+  "failures": [
+    {
+      "type": "cuda_compute_capability_incompatible",
+      "severity": "fatal",
+      "description": "NVIDIA Titan Xp (sm_61) is not compatible with PyTorch 2.10.0+cu128 which requires sm_70+. GPU was fundamentally unusable for any PyTorch workload.",
+      "gpu": "NVIDIA TITAN Xp COLLECTORS EDITION",
+      "compute_capability": "sm_61",
+      "pytorch_version": "2.10.0+cu128",
+      "supported_capabilities": "sm_70 sm_75 sm_80 sm_86 sm_90 sm_100 sm_120",
+      "resolution": "Never select GPUs with sm_61 or below. Use GPU name allowlist filter."
+    },
+    {
+      "type": "ssh_connection_impossible",
+      "description": "South Korea instance SSH was completely inaccessible despite 30+ attempts. Server disconnected during key exchange.",
+      "region": "KR",
+      "resolution": "Abandon after 3 failed SSH attempts. Prefer reliability > 0.99."
+    },
+    {
+      "type": "model_download_silent_failure",
+      "description": "Onstart script reported completion but model directory did not exist. ACEModelLoader raised FileNotFoundError during node registration.",
+      "error_message": "FileNotFoundError: [Errno 2] No such file or directory: '/root/ComfyUI/models/TTS/ACE-Step-v1-3.5B'",
+      "resolution": "Add post-download verification: check directory existence and file sizes."
+    },
+    {
+      "type": "ssh_tunnel_instability",
+      "description": "SSH tunnel frequently dropped causing empty API responses (JSONDecodeError: Expecting value: line 1 column 1). Masked the real CUDA error for hours.",
+      "resolution": "Use autossh with ServerAliveInterval=10. Or avoid SSH entirely."
+    },
+    {
+      "type": "unauthorized_instance_deletion",
+      "description": "Agent executed 'vastai destroy instance' without user confirmation, destroying a fully configured environment.",
+      "resolution": "All destroy/delete operations require explicit user confirmation."
+    },
+    {
+      "type": "cascading_failure_masking",
+      "description": "Model download failure → node registration failure → 400 errors → SSH instability masked real cause → CUDA incompatibility discovered last after hours of debugging",
+      "resolution": "Run GPU compatibility check FIRST before any software setup. Fail fast."
+    }
+  ],
+  "lessons_learned": [
+    "CRITICAL: Validate GPU compute capability BEFORE any setup. sm_70+ required for PyTorch 2.x",
+    "CRITICAL: Never select GTX 10xx, Titan Xp, or older GPUs for PyTorch workloads",
+    "Use GPU name allowlist: RTX 20xx+, T4+, V100+, A100, L40S, H100",
+    "Run nvidia-smi and torch.cuda.is_available() as first post-boot check",
+    "Model download scripts must verify file existence and sizes",
+    "SSH tunnel instability can mask the real error - check GPU/CUDA first",
+    "Abandon SSH after 3 failed connection attempts",
+    "All destructive operations (destroy, delete) require user confirmation",
+    "Consider ACE-Step 1.5 (2B model, <4GB VRAM, native REST API) as upgrade from v1 3.5B"
+  ],
+  "recommended_next_config": {
+    "model": "ACE-Step-1.5",
+    "model_repo": "https://github.com/ace-step/ACE-Step-1.5",
+    "docker_image": "valyriantech/ace-step-1.5",
+    "min_gpu": "RTX 3060 (sm_86)",
+    "min_vram_gb": 4,
+    "backend": "Native REST API (acestep-api) or ComfyUI native node",
+    "avoid": "ComfyUI + third-party custom nodes",
+    "ssh": "autossh or avoid SSH entirely (direct HTTP)"
+  }
+}

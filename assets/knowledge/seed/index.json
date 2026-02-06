@@ -1,0 +1,22 @@
+{
+  "records": {
+    "4bc1bf56_20260205_160000": {
+      "repo_url": "https://github.com/ace-step/ACE-Step",
+      "provider": "vast.ai",
+      "success": false,
+      "created_at": "2026-02-05T16:00:00"
+    },
+    "4bc1bf56_20260206_180000": {
+      "repo_url": "https://github.com/ace-step/ACE-Step",
+      "provider": "vast.ai",
+      "success": false,
+      "created_at": "2026-02-06T18:00:00"
+    }
+  },
+  "repo_mapping": {
+    "4bc1bf56d9387b34": [
+      "4bc1bf56_20260205_160000",
+      "4bc1bf56_20260206_180000"
+    ]
+  }
+}

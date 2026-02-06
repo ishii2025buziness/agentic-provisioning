@@ -6,7 +6,7 @@ license: MIT
 compatibility: Requires internet access for GitHub API and web search. Docker recommended for local provisioning.
 metadata:
   author: agentic-provisioning
-  version: "0.2.0"
+  version: "0.3.0"
 allowed-tools: Bash WebSearch WebFetch Read Write
 ---
 
@@ -73,7 +73,51 @@ torch, pytorch, tensorflow, jax, cuda, nvidia, cudnn,
 transformers, diffusers, accelerate, vllm, triton
 ```
 
-## 1.4 要件の構造化
+## 1.4 GPU互換性の検証（必須）
+
+GPUが必要な場合、互換性を**プロビジョニング前に**検証する。
+
+### CUDA Compute Capability チェック
+
+現行のPyTorch (2.x) は **sm_70以上**（Volta世代以降）のみサポート。
+以下のGPUは**使用禁止**:
+
+| GPU | Compute Capability | 対応状況 |
+|-----|-------------------|----------|
+| GTX 1080 Ti | sm_61 | **非対応** |
+| TITAN Xp | sm_61 | **非対応** |
+| TITAN V | sm_70 | 対応 (最低ライン) |
+| RTX 2080 Ti | sm_75 | 対応 |
+| RTX 3060/3090 | sm_86 | **推奨** |
+| RTX 4060/4090 | sm_89 | **推奨** |
+| A100 | sm_80 | **推奨** |
+| H100 | sm_90 | 対応 |
+| L40S | sm_89 | 対応 |
+
+**ルール:**
+- `sm_70`未満のGPU → **即座に除外。選択してはならない**
+- `sm_75`以上を推奨
+- クラウドGPUオファーを検索する際は、GPUモデル名から世代を判定
+
+### VRAM推定ルール
+
+| パターン | 必要VRAM |
+|---------|---------|
+| モデルサイズがREADMEに記載 → その値に基づく | 記載値 × 1.2 (バッファ) |
+| `transformers`, `diffusers`, `vllm` | 16GB以上 |
+| `torch`, `tensorflow` (一般) | 8GB以上 |
+| それ以外 | 2GB |
+
+### プリビルドDockerイメージの探索
+
+GPU必要なリポジトリの場合、**まずDocker Hubで公式/コミュニティのプリビルドイメージを検索**:
+```
+"<repo_name> docker" site:hub.docker.com
+"<repo_name> docker image" site:github.com
+```
+プリビルドイメージがあれば、モデル・依存関係のダウンロード失敗を回避できる。
+
+## 1.5 要件の構造化
 
 ```json
 {
@@ -83,10 +127,14 @@ transformers, diffusers, accelerate, vllm, triton
   "has_dockerfile": true,
   "needs_gpu": true,
   "gpu_type": "CUDA",
+  "min_compute_capability": "sm_75",
   "frameworks": ["pytorch", "transformers"],
+  "estimated_vram_gb": 8,
   "estimated_memory_gb": 16,
   "entry_point": "main.py",
-  "ports": [8080]
+  "ports": [8080],
+  "prebuild_docker_image": null,
+  "native_api_server": null
 }
 ```
 
@@ -212,17 +260,136 @@ npx openskills sync
 |------|------------------------------------|
 | CPU + 低コスト | Hetzner (via `mcp-hetzner`) |
 | GPU + 低コスト | vast.ai, RunPod |
+| GPU + 信頼性 | Lambda Labs, RunPod |
+| GPU + ゼロインフラ | Replicate, Modal, PiAPI |
 | 統合データ収集 | Apify, Firecrawl (via MCP) |
 | ローカル開発 | Docker Local |
 
-## 4.2 Docker Local プロビジョニング
+## 4.2 クラウドGPUプロビジョニング: プリフライトチェック（必須）
 
-### 4.2.1 リポジトリのクローン
+クラウドGPUにデプロイする前に、以下のチェックリストを**全て**実行:
+
+### 4.2.1 リージョンフィルタ
+
+**中国リージョン (GFW) は必ず除外。** Docker Hub, HuggingFace, PyPI等へのアクセスが制限される。
+
+```bash
+# vast.ai: 中国を除外してオファー検索
+vastai search offers 'geolocation notin ["CN"] reliability > 0.99 num_gpus=1 gpu_ram >= <必要VRAM>'
+
+# 推奨リージョン: US, CA, DE, NL, JP, SE, FI
+```
+
+**追加の地域ルール:**
+- 信頼性 (`reliability`) > 0.99 を必須フィルタにする
+- ネットワーク帯域 (`inet_down > 100`, `inet_up > 100`) を確認
+- Certified Data Center を優先
+
+### 4.2.2 GPU互換性チェック
+
+Step 1.4 で定義した `min_compute_capability` に基づき、オファーのGPUモデルを検証:
+
+```
+# vast.ai: GPU名でフィルタ（古いGPUを除外）
+vastai search offers 'gpu_name in ["RTX 3060","RTX 3070","RTX 3080","RTX 3090","RTX 4060","RTX 4070","RTX 4080","RTX 4090","A100","A10","L40S","H100"]'
+```
+
+**絶対に選択してはならないGPU:**
+- GTX 10xx系 (1080, 1070等) — sm_61, PyTorch非対応
+- TITAN Xp — sm_61, PyTorch非対応
+- GTX 9xx系以前 — sm_52以下
+
+### 4.2.3 Dockerイメージ選択
+
+**優先順位:**
+1. **プリビルドイメージ（モデル入り）** — 起動時ダウンロード不要、最も信頼性が高い
+2. **公式Dockerfile** — リポジトリにDockerfileがある場合
+3. **ランタイムベースイメージ** — `nvidia/cuda:12.x-runtime-ubuntu22.04`
+4. ~~develイメージ~~ — **使用しない**。不必要に大きい（~10GB）
+
+**NG:**
+- `nvidia/cuda:*-devel-*` — ACE-Stepなどの推論専用ワークロードでは不要
+
+### 4.2.4 セットアップスクリプトのエラーハンドリング
+
+onstart/setup スクリプトには以下を必須にする:
+
+```bash
+set -euo pipefail
+
+# モデルダウンロード後の存在確認
+if [ ! -d "/path/to/expected/model" ]; then
+  echo "ERROR: Model download failed" >&2
+  exit 1
+fi
+
+# ファイルサイズ確認（空ファイル/部分ダウンロード防止）
+MODEL_SIZE=$(du -sm /path/to/model | cut -f1)
+if [ "$MODEL_SIZE" -lt <expected_min_mb> ]; then
+  echo "ERROR: Model incomplete (${MODEL_SIZE}MB < expected)" >&2
+  exit 1
+fi
+
+echo "SETUP_COMPLETE"
+```
+
+### 4.2.5 SSH接続の信頼性
+
+SSHトンネルが必要な場合、`ssh` ではなく **`autossh`** を使用:
+
+```bash
+autossh -M 0 -f -N \
+  -o "ServerAliveInterval=10" \
+  -o "ServerAliveCountMax=3" \
+  -o "ExitOnForwardFailure=yes" \
+  -o "StrictHostKeyChecking=no" \
+  -L <local_port>:localhost:<remote_port> \
+  -p <ssh_port> <user>@<host>
+```
+
+SSHなしで直接HTTPアクセスできるプロバイダー/構成を優先する。
+
+### 4.2.6 ポストプロビジョニング: ヘルスチェック
+
+環境が起動したら、使用可能になるまで**ヘルスチェックで確認**:
+
+```bash
+# HTTPエンドポイントの場合
+for i in $(seq 1 30); do
+  if curl -sf http://localhost:<port>/health > /dev/null 2>&1; then
+    echo "Service is ready"
+    break
+  fi
+  sleep 10
+done
+```
+
+**ヘルスチェック対象:**
+- APIサーバーのレスポンス (200 OK)
+- GPU認識確認 (`nvidia-smi` の出力)
+- モデルファイルの存在確認
+- CUDA互換性確認 (`python -c "import torch; print(torch.cuda.is_available())"`)
+
+### 4.2.7 破壊的操作のガードレール
+
+以下の操作は**実行前にユーザーに必ず確認**:
+
+- `vastai destroy instance` — インスタンス削除
+- `vastai stop instance` — インスタンス停止（ストレージは保持）
+- `runpod stop/terminate pod` — Pod停止/削除
+
+**理由:** セットアップ済み環境の削除は、モデルダウンロード・依存関係インストール等の
+再構築コスト（時間・費用）が大きい。「停止」と「削除」の違いを明確にし、
+ユーザーが意図しない環境消失を防ぐ。
+
+## 4.3 Docker Local プロビジョニング
+
+### 4.3.1 リポジトリのクローン
 ```bash
 git clone --depth 1 {repo_url} /tmp/provision_{id}
 ```
 
-### 4.2.2 Dockerfileの確認/生成
+### 4.3.2 Dockerfileの確認/生成
 
 Dockerfileがない場合、言語に応じて生成:
 
@@ -253,7 +420,7 @@ FROM nvidia/cuda:12.1-runtime-ubuntu22.04
 # ... 以下同様
 ```
 
-### 4.2.3 ビルドと実行
+### 4.3.3 ビルドと実行
 ```bash
 docker build -t ap-{repo_name}:latest /tmp/provision_{id}
 docker run -d --name ap-{instance_id} ap-{repo_name}:latest
@@ -328,4 +495,7 @@ docker run -d --gpus all --name ap-{instance_id} ap-{repo_name}:latest
 - [scripts/search_better.py](scripts/search_better.py) - 検索クエリ生成
 - [scripts/provision.py](scripts/provision.py) - プロビジョニング
 
-詳細は [references/ARCHITECTURE.md](references/ARCHITECTURE.md) を参照。
+詳細は以下を参照:
+- [references/ARCHITECTURE.md](references/ARCHITECTURE.md) — 設計思想・データフロー
+- [references/PROVIDERS.md](references/PROVIDERS.md) — プロバイダー情報・選択ガイド
+- [references/GUARDRAILS.md](references/GUARDRAILS.md) — 障害防止ルール・事例データベース
